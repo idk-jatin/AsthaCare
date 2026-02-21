@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -27,43 +28,71 @@ fun InputScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center
     ) {
 
-        Text("Detect air health risk from location")
+        Text(
+            text = "Air Health Check",
+            style = MaterialTheme.typography.headlineMedium
+        )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Button(onClick = {
+        Text(
+            text = "We use your location to fetch live air quality data " +
+                    "and predict respiratory health risk.",
+            style = MaterialTheme.typography.bodyMedium
+        )
 
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) return@Button
+        Spacer(modifier = Modifier.height(32.dp))
 
-            loading = true
+        Button(
+            onClick = {
 
-            location.getLocation { lat, lon ->
-                println("LAT=$lat LON=$lon")
-                CoroutineScope(Dispatchers.IO).launch {
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) return@Button
 
-                    val risk = repo.predict(lat, lon)
+                loading = true
 
-                    withContext(Dispatchers.Main) {
-                        loading = false
-                        navController.navigate("${Routes.RESULT}/$risk")
+                location.getLocation { lat: Double, lon: Double ->
+
+                    CoroutineScope(Dispatchers.IO).launch {
+
+                        val result = repo.predict(lat, lon)
+
+                        withContext(Dispatchers.Main) {
+
+                            loading = false
+
+                            navController.currentBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("prediction", result)
+
+                            navController.navigate(Routes.RESULT)
+                        }
                     }
                 }
-            }
-
-        }) {
-            Text("Auto Detect")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Detect Automatically")
         }
 
         if (loading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator()
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Fetching air quality data…")
+            }
         }
     }
 }

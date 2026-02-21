@@ -1,16 +1,15 @@
 package com.example.asthacare.navigation
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.asthacare.ui.screens.HomeScreen
-import com.example.asthacare.ui.screens.InputScreen
-import com.example.asthacare.ui.screens.ResultScreen
+import com.example.asthacare.data.model.PredictionResult
+import com.example.asthacare.ui.screens.*
 
 object Routes {
     const val HOME = "home"
-    const val INPUT = "input"
     const val RESULT = "result"
 }
 
@@ -26,13 +25,18 @@ fun NavGraph(navController: NavHostController) {
             HomeScreen(navController)
         }
 
-        composable(Routes.INPUT) {
-            InputScreen(navController)
-        }
+        composable(Routes.RESULT) {
 
-        composable("${Routes.RESULT}/{risk}") { backStackEntry ->
-            val risk = backStackEntry.arguments?.getString("risk") ?: "Unknown"
-            ResultScreen(navController, risk)
+            val result =
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<PredictionResult>("prediction")
+
+            if (result != null) {
+                ResultScreen(navController, result)
+            } else {
+                Text("No prediction data")
+            }
         }
     }
 }

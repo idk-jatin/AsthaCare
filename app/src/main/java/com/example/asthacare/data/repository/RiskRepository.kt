@@ -1,5 +1,5 @@
 package com.example.asthacare.data.repository
-
+import com.example.asthacare.data.model.PredictionResult
 import android.content.Context
 import com.example.asthacare.ml.FeatureEngineer
 import com.example.asthacare.ml.RiskPredictor
@@ -8,7 +8,7 @@ class RiskRepository(context: Context) {
 
     private val predictor = RiskPredictor(context)
 
-    suspend fun predict(lat: Double, lon: Double): String {
+    suspend fun predict(lat: Double, lon: Double): PredictionResult {
 
         val air = ApiClient.airApi.air(lat, lon)
         val weather = ApiClient.weatherApi.weather(lat, lon)
@@ -22,17 +22,15 @@ class RiskRepository(context: Context) {
         val temp = weather.hourly.temperature_2m.first()
         val hum = weather.hourly.relative_humidity_2m.first()
         val wind = weather.hourly.windspeed_10m.first()
-        println("PM25=$pm25 PM10=$pm10 NO2=$no2 SO2=$so2 O3=$o3")
-        println("TEMP=$temp HUM=$hum WIND=$wind")
-        val features =
-            FeatureEngineer.computeFeatures(
-                pm25, pm10, no2, so2, o3,
-                temp, hum, wind
-            )
+
+        val features = FeatureEngineer.computeFeatures(
+            pm25, pm10, no2, so2, o3,
+            temp, hum, wind
+        )
 
         val result = predictor.predict(features)?.toInt()
 
-        return when (result) {
+        val risk = when (result) {
             0 -> "Very High"
             1 -> "High"
             2 -> "Moderate"
@@ -40,5 +38,23 @@ class RiskRepository(context: Context) {
             4 -> "Very Low"
             else -> "Unknown"
         }
+
+        val pollutionIndex =
+            (pm25 + pm10 + no2 + so2 + o3) / 5f
+
+        val weatherStress =
+            kotlin.math.abs(temp - 22f) +
+                    kotlin.math.abs(hum - 50f)
+
+        return PredictionResult(
+            risk,
+            pm25,
+            pm10,
+            temp,
+            hum,
+            wind,
+            pollutionIndex,
+            weatherStress
+        )
     }
 }
