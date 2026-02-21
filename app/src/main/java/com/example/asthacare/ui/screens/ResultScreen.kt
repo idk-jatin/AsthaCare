@@ -23,10 +23,7 @@ fun ResultScreen(navController: NavHostController, risk: String) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = risk,
-            style = MaterialTheme.typography.headlineLarge
-        )
+        Text(risk, style = MaterialTheme.typography.headlineLarge)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -42,9 +39,11 @@ fun ResultScreen(navController: NavHostController, risk: String) {
 
 private fun getAdvice(risk: String): String {
     return when (risk) {
-        "High" -> "Avoid outdoor exposure. Consider wearing a mask."
-        "Moderate" -> "Limit prolonged outdoor activity."
-        "Low" -> "Air quality is acceptable."
+        "Very High" -> "Severe health risk. Avoid outdoor exposure completely."
+        "High" -> "Limit outdoor activities. Wear mask if necessary."
+        "Moderate" -> "Sensitive individuals should take precautions."
+        "Low" -> "Air quality generally safe."
+        "Very Low" -> "Excellent air quality."
         else -> "Insufficient data."
     }
 }

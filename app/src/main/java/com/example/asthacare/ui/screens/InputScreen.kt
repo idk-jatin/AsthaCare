@@ -1,21 +1,28 @@
 package com.example.asthacare.ui.screens
 
-
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
+import com.example.asthacare.data.repository.RiskRepository
 import com.example.asthacare.navigation.Routes
+import com.example.asthacare.utils.LocationHelper
+import kotlinx.coroutines.*
 
 @Composable
 fun InputScreen(navController: NavHostController) {
 
-    var aqi by remember { mutableStateOf("") }
-    var temperature by remember { mutableStateOf("") }
-    var humidity by remember { mutableStateOf("") }
-    var windSpeed by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val repo = remember { RiskRepository(context) }
+    val location = remember { LocationHelper(context) }
+
+    var loading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -23,67 +30,40 @@ fun InputScreen(navController: NavHostController) {
             .padding(24.dp)
     ) {
 
-        Text("Enter Environmental Data", style = MaterialTheme.typography.titleMedium)
+        Text("Detect air health risk from location")
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        OutlinedTextField(
-            value = aqi,
-            onValueChange = { aqi = it },
-            label = { Text("AQI") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Button(onClick = {
 
-        Spacer(modifier = Modifier.height(8.dp))
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) return@Button
 
-        OutlinedTextField(
-            value = temperature,
-            onValueChange = { temperature = it },
-            label = { Text("Temperature (°C)") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            loading = true
 
-        Spacer(modifier = Modifier.height(8.dp))
+            location.getLocation { lat, lon ->
+                println("LAT=$lat LON=$lon")
+                CoroutineScope(Dispatchers.IO).launch {
 
-        OutlinedTextField(
-            value = humidity,
-            onValueChange = { humidity = it },
-            label = { Text("Humidity (%)") },
-            modifier = Modifier.fillMaxWidth()
-        )
+                    val risk = repo.predict(lat, lon)
 
-        Spacer(modifier = Modifier.height(8.dp))
+                    withContext(Dispatchers.Main) {
+                        loading = false
+                        navController.navigate("${Routes.RESULT}/$risk")
+                    }
+                }
+            }
 
-        OutlinedTextField(
-            value = windSpeed,
-            onValueChange = { windSpeed = it },
-            label = { Text("Wind Speed (m/s)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = {
-
-                val risk = predictRisk(aqi)
-
-                navController.navigate("${Routes.RESULT}/$risk")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Predict Risk")
+        }) {
+            Text("Auto Detect")
         }
-    }
-}
 
-private fun predictRisk(aqiInput: String): String {
-
-    val aqi = aqiInput.toIntOrNull() ?: return "Unknown"
-
-    return when {
-        aqi > 200 -> "High"
-        aqi > 100 -> "Moderate"
-        else -> "Low"
+        if (loading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
     }
 }
